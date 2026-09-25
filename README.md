@@ -15,7 +15,7 @@
 
 <br />
 
-**[🌐 Service](https://oneschedule.site)** &nbsp; **[📖 Swagger UI](https://api.oneschedule.site/swagger-ui/index.html)** &nbsp; **[💻 Frontend Repo](https://github.com/Wonyes/dashboard_web)**
+**[🌐 Service](https://oneschedule.site)** &nbsp; **[📖 Swagger UI](https://api.oneschedule.site/swagger-ui/index.html)** &nbsp; **[💻 Frontend Repo](https://github.com/Wonyes/oneschedule-web)**
 
 <br />
 
@@ -96,6 +96,8 @@
 | **🟢 Google OAuth** | `AuthProvider` · `providerId`로 로컬 계정과 소셜 계정을 한 테이블에서 구분 |
 | **👤 프로필** | 닉네임 · 이름 · 전화번호 수정, 비밀번호 변경, 프로필 이미지 업로드 |
 | **✅ 중복 검사** | 이메일 · 닉네임 실시간 확인 |
+| **🔒 인증 시도 제한** | 코드 5회 연속 실패 시 잠금, 재전송하면 해제 |
+| **👋 회원 탈퇴** | 개인 일정은 삭제, 그룹 일정은 남기고 작성자만 끊는다. 그룹장이면 승계하거나 혼자면 해체 |
 
 </details>
 
@@ -110,7 +112,8 @@
 | :--- | :--- |
 | **🎫 그룹 생성 · 참여** | 초대 코드(`groupCode`)로 참여. 공개 그룹은 목록 조회 가능 |
 | **📮 가입 신청 흐름** | 신청 → 관리자 승인/거절. `JoinRequestStatus`로 상태 관리, 거절 후 재신청 지원 |
-| **🧑‍💼 권한** | `GroupRole`(OWNER · MANAGER · MEMBER). `isManager()`로 판정을 한 곳에 모음 |
+| **🧑‍💼 권한** | `GroupRole`(SUPER 그룹장 · SUB 관리자 · MEMBER). `isManager()`로 판정을 한 곳에 모음 |
+| **👑 그룹장 위임** | 그룹장만 넘길 수 있고, 넘기는 즉시 본인은 관리자로 내려가 그룹장이 항상 한 명 |
 | **⚙️ 그룹 관리** | 이름 · 공개 설정 · 프로필 이미지 변경, 멤버 내보내기, 그룹 해체 |
 | **🟢 온라인 멤버** | SSE 연결 유무 + `lastSeenAt`으로 그룹 내 접속 중인 멤버 조회 |
 
@@ -136,14 +139,15 @@
 ### 🔔 알림 · 실시간
 
 <details>
-<summary><b>SSE 푸시, 17종 템플릿, 1시간 전 리마인더</b></summary>
+<summary><b>SSE 푸시, 18종 템플릿, 1시간 전 리마인더</b></summary>
 
 <br />
 
 | 기능 | 설명 |
 | :--- | :--- |
 | **📡 SSE 구독** | `GET /v1/api/sse/subscribe` — 30분 타임아웃, 20초 하트비트, 멤버당 다중 연결 허용 |
-| **🔔 알림 17종** | 가입 신청 · 승인 · 거절 · 새 멤버 · 탈퇴 · 권한 변경 · 그룹 해체 · 일정 생성/변경/취소 · 참여자 추가/제외 · 리마인더 · 비밀번호 변경 · 가입 환영 |
+| **🔔 알림 18종** | 가입 신청 · 승인 · 거절 · 새 멤버 · 탈퇴 · 권한 변경 · **그룹장 변경** · 그룹 해체 · 일정 생성/변경/취소 · 참여자 추가/제외 · 리마인더 · 비밀번호 변경 · 가입 환영 |
+| **📍 이동 경로** | 일정 알림은 `scheduleDate`를 함께 실어, 클릭하면 그 날짜의 일간 뷰로 바로 간다 |
 | **🧾 템플릿** | 문구를 `NotificationType`의 `template`에 모으고 `message(...)`로 채움 — 서비스 코드에 문자열이 흩어지지 않음 |
 | **⏰ 리마인더** | 매분 스케줄러가 1시간 뒤 시작하는 일정을 찾아 발송, `remindedAt`으로 중복 방지 |
 | **📥 읽음 처리** | 개별 읽음 · 전체 읽음 · 안 읽은 수 조회, 페이징 목록 |
@@ -343,7 +347,7 @@ public enum NotificationType {
 
 **결과**
 
-- 알림 17종의 제목 · 본문이 한 파일에 모였습니다.
+- 알림 18종의 제목 · 본문이 한 파일에 모였습니다.
 - 서비스는 `type.message(nickname, groupName)`만 호출하고, 문구 수정은 enum만 고칩니다.
 
 </details>
@@ -425,7 +429,50 @@ public class CookieProperties {
 
 </details>
 
-### 5️⃣ SSE 연결을 온라인 표시로 재활용하기
+### 5️⃣ 회원 탈퇴 — 무엇을 지우고 무엇을 남길 것인가
+
+<details>
+<summary><b>"그룹 일정은 남되 작성자 표시만 사라진다"를 코드로 옮기기</b></summary>
+
+<br />
+
+**문제 상황**
+
+개인정보처리방침에 이렇게 적어 두었습니다.
+
+> 삭제되면 계정과 개인 일정이 사라지고, **그룹 일정은 그룹에 남되 작성자 표시만 사라집니다.**
+
+그래서 `memberRepository.delete(member)` 한 줄로 끝나지 않습니다. 회원을 참조하는 테이블이 다섯이고, cascade 설정이 없어 순서를 틀리면 FK 제약으로 바로 실패합니다.
+
+**해결: 남길 것과 지울 것을 나누고, FK 역순으로**
+
+```
+1. 그룹장인 그룹 → 관리자 우선으로 승계, 혼자면 해체   (주인 없는 그룹을 남기지 않는다)
+2. 그룹 일정 작성자 → null   /  개인 일정 → 삭제
+3. 참여자 → 그룹원 → 가입신청                        (참여자가 그룹원을 참조하므로 먼저)
+4. 받은 알림 → 삭제  /  보낸 알림 → sender만 null     (남의 알림함에 있는 것은 지우지 않는다)
+5. 토큰 → 회원
+```
+
+**실제로 돌려봐야 나온 함정**
+
+테스트로 계정을 하나 탈퇴시켜 보니, 남아 있어야 할 그룹 일정이 목록에서 **통째로 사라졌습니다.** 원인은 조회 쿼리였습니다.
+
+```java
+join fetch s.member      // INNER JOIN — 작성자가 null이면 행 자체가 결과에서 빠진다
+left join fetch s.member // 이렇게 고쳐야 남는다
+```
+
+데이터는 DB에 멀쩡히 있는데 화면에만 안 나오는, 에러도 안 나고 컴파일도 되는 종류의 버그였습니다. 코드만 읽어서는 찾을 수 없었습니다.
+
+**결과**
+
+- 탈퇴 후에도 그룹 일정과 타인의 알림함이 보존되고, 작성자 자리만 비어 있습니다.
+- 작성자가 `null`이 되면서 터질 수 있는 지점(목록 생성, 수정·삭제 권한 검사)을 함께 막았습니다.
+
+</details>
+
+### 6️⃣ SSE 연결을 온라인 표시로 재활용하기
 
 <details>
 <summary><b>접속 여부를 따로 폴링하지 않기</b></summary>
@@ -472,7 +519,7 @@ public SseEmitter add(Long memberNo) {
 
 | 영역 | 베이스 | 주요 엔드포인트 |
 | :--- | :--- | :--- |
-| **회원 · 인증** | `/v1/api/members` | `POST /signup` · `POST /login` · `POST /logout` · `GET /info` · `PATCH /info` · `PUT /password` · `POST /password-reset` · `POST /profile-image` · `GET /email-check` · `GET /nickname-check` · `POST /email-verification/request` · `POST /email-verification/verify` |
+| **회원 · 인증** | `/v1/api/members` | `POST /signup` · `POST /login` · `POST /logout` · `GET /info` · `PATCH /info` · `PUT /password` · `POST /password-reset` · `POST /profile-image` · `GET /email-check` · `GET /nickname-check` · `POST /email-verification/request` · `POST /email-verification/verify` · `DELETE /` (탈퇴) |
 | **토큰** | `/v1/api` | `POST /token-refresh` |
 | **그룹** | `/v1/api/group` | `POST /create` · `POST /join` · `GET /my/groups` · `GET /public` · `PATCH /{groupNo}/setting` · `PUT /group-name/{groupNo}` · `POST /{groupNo}/profile-image` · `DELETE /leave` · `DELETE /{groupNo}/disband` |
 | **그룹 멤버** | `/v1/api/group` | `PATCH /{groupNo}/member/{memberNo}` · `DELETE /{groupNo}/member/{memberNo}` · `GET /{groupNo}/online` |
@@ -589,28 +636,15 @@ dashboard/
 
 ## 🚧 남은 일
 
-> 2026-09-18 점검 기준. 우선순위 🔴 높음 · 🟡 보통 · ⚪ 낮음
-
-### 고쳐야 할 것
-
-| 우선 | 항목 | 어디 | 메모 |
-|---|---|---|---|
-| 🔴 | RefreshToken 만료 검사 | `RefreshTokenService.refresh` | `expiresAt`을 안 봄 → 청소 스케줄러(04:00) 전까지 만료 토큰으로 재발급됨. `isBefore(now)`면 삭제 + `JWT_EXPIRE_TOKEN` |
-| 🔴 | `ErrorCode` 번호 중복 | `ErrorCode` | `-410`(JOIN_REQUEST_ALREADY_PENDING · INVALID_GROUP_NAME), `-411`(JOIN_REQUEST_ALREADY_PROCESSED · INVALID_JOIN_MESSAGE). 프론트가 코드로 분기하면 오작동 |
-| 🟡 | 카테고리 입력 검증 | `ScheduleRequest.category` | `String` → `ScheduleCategory` enum, 잘못된 값 422. 지금은 폴백으로 조용히 "업무" |
-| 🟡 | 옛 카테고리 데이터 | DB `TB_SCHEDULE.CATEGORY` | `UPDATE … SET CATEGORY=personal WHERE CATEGORY IN (개인,약속,운동)`, `업무 → work` |
-| 🟡 | 에러 메시지 톤 | `ErrorCode` | 대부분 "~습니다", 이메일 인증 5개만 "~해요". 프론트가 그대로 보여줌 → "~해요"로 통일 |
-| ⚪ | 테스트 가입 신청 | wony house(11) | 대기 2건 거절 처리 |
-| ⚪ | 공휴일 조회 N+1 | `HolidayService` | 루프 → 배치 조회. 월 1회 배치라 급하지 않음 |
+> 2026-09-26 기준. 우선순위 🔴 높음 · 🟡 보통 · ⚪ 낮음
 
 ### 추가할 것
 
 | 우선 | 항목 | 프론트 | 백 | 메모 |
 |---|---|---|---|---|
-| 🔴 | 알림 클릭 라우팅 | `useOpenNotification` 한 곳에서 `type`별 분기 | — | 일정 알림 → 일뷰(`/schedule?view=day&date=…`), 가입 신청 → `/group/{no}?tab=requests`, 해체·거절 → `/group`. 지금은 전부 `/group/{targetNo}` |
-| 🔴 | 그룹 초대 링크 `/join/{code}` | 공개 페이지 + OG + 히어로 "링크 복사" | `GET /group/preview?groupCode=`(permitAll), `PATCH /group/{no}/code`(재발급) | 미들웨어 공개 경로, 로그인 후 `?next=` 복귀. OG 이미지 완성돼 있어 카톡 미리보기 됨 |
+| 🔴 | 그룹 초대 링크 `/join/{code}` | 공개 페이지 + 동적 OG + "링크 복사" | `GET /group/preview?groupCode=`(permitAll), `PATCH /group/{no}/code`(재발급) | 로그인 후 복귀(Return URL)가 함께 필요하다. 구글 OAuth는 백엔드가 고정 URL로 리다이렉트해서 쿠키 없이는 복귀가 끊긴다 |
 | 🟡 | 정리 스케줄러 2개 | — | 알림(읽음 30일·안 읽음 90일), 만료 이메일 인증 행 | `RefreshTokenCleanupScheduler` 복붙 |
-| 🟡 | 컴포넌트 테스트 | 다이얼 · 시트 폼 · 이메일 인증 스텝 · 종일 줄 | — | 오늘 분리해 둬서 붙이기 쉬움 |
+| 🟡 | 가입 직후 자동 로그인 | 가입 성공 후 로그인 API 재호출 | — | 지금은 가입 → `/login?welcome=1` → 다시 로그인. 초대 링크 흐름에서 특히 길어진다 |
 | ⚪ | 일정 참석/불참 | 참여자 응답 UI | 응답 엔티티 | 등록자에게 알림 |
 | ⚪ | ICS 내보내기 | — | `.ics` + 구독 URL | 구글·네이버 동기화 대신 |
 | ⚪ | 프로필 공개 설정 | 이메일·전화 노출 토글 | 필드 2개 | |
@@ -618,25 +652,21 @@ dashboard/
 | ⚪ | Sentry · Analytics | 런타임 에러·페이지 이동 계측 | — | 배포 후 |
 | 보류 | 반복 일정 · 웹 푸시 · 외부 캘린더 동기화 | | | 크기 큼 / 스코프 검수 필요 |
 
-### 정리할 것 (동작엔 문제 없음)
+### 고칠 것 (동작엔 문제 없음)
 
 | 항목 | 어디 | 메모 |
 |---|---|---|
-| `utils/schedule.ts` 521줄 | 프론트 | 날씨 · lane 배치 · 날짜 계산이 한 파일. `utils/weather`(이미 있음)로 옮기고 `utils/lanes.ts`로 나누면 3등분 |
-| `hooks/querys/useGroup.ts` 223줄 | 프론트 | 조회 훅과 mutation 훅 분리 (`useGroupQueries` / `useGroupMutations`) |
-| `GroupMemberService` 300줄 | 백 | 가입 신청 처리(`requestJoin`·`processJoinRequest`·`reopenRequest`)를 `GroupJoinService`로 |
-| 프로퍼티 이름 `weather.service-key` | 백 yml | 공휴일도 쓰니 `public-data.service-key`로 |
-| `RefreshTokenService` 빈 줄·`save()` | 백 | `@Transactional` 안이라 더티체킹으로 저장됨, `save` 줄 불필요 |
-| 옛 `HELP.md` | 백 루트 | Spring Initializr 기본 파일, 삭제 |
+| `MemberEntity.password`가 모든 조회에 딸려옴 | 백 | 멤버를 fetch join 할 때마다 BCrypt 해시가 메모리로 올라온다. `@Basic(fetch = LAZY)` |
+| `GroupMemberService` 295줄 | 백 | 가입 신청 4개를 `GroupJoinService`로 뺄 수 있지만, `addMember`를 양쪽이 써서 서비스 간 의존이 생긴다. 지금은 그대로 두는 쪽 |
+| 계정 열거 | 백 | `email-check`·`nickname-check`가 무제한. 가입 흐름으로도 어차피 드러나 구조적으로 피하기 어렵다. 트래픽이 늘면 IP 단위 제한 |
+| 공휴일 루프 `save()` | `HolidayService` | `saveAll()`로. 다만 ID 전략이 IDENTITY라 실제 INSERT 수는 그대로다. 월 1회 배치 |
+| `@DynamicUpdate` 미적용 | 백 | 컬럼 하나만 바꿔도 전체 컬럼을 UPDATE한다. 트래픽이 적어 급하지 않음 |
 
-### 순서 제안
+### 2026-09-26에 끝낸 것
 
-1. RefreshToken 만료 + ErrorCode 중복 (합쳐서 15분)
-2. 알림 클릭 라우팅 (1시간, 프론트만)
-3. 그룹 초대 링크 (반나절)
-4. 카테고리 enum + 데이터 정리 (30분)
-5. 정리 스케줄러 (30분)
-
+회원 탈퇴 · 그룹장 위임 · 인증 코드 시도 제한 · 알림 종류별 라우팅 ·
+N+1 완화(`@EntityGraph` + `default_batch_fetch_size`) · `SameSite=Lax` ·
+설정값 Jasypt 암호화 · 긴 파일 분리 · 죽은 코드 정리
 
 ---
 
