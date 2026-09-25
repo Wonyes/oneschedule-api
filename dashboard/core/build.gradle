@@ -1,0 +1,26 @@
+bootJar {
+	enabled = false
+}
+jar {
+	enabled = true
+}
+
+tasks.register("prepareKotlinBuildScriptModel"){}
+
+def querydslDir = "$buildDir/generated/querydsl"
+
+sourceSets {
+	main {
+		java {
+			srcDirs += querydslDir
+		}
+	}
+}
+
+tasks.named('clean') {
+	doLast {
+		delete file(querydslDir)
+	}
+}
+
+

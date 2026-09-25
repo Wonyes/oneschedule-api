@@ -1,0 +1,24 @@
+name: Deploy API
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/ubuntu/apps/dashboard-apis/dashboard
+            git pull origin master
+            ./gradlew :api:bootJar
+            sudo systemctl restart dashboard-api
+            sudo systemctl status dashboard-api --no-pager
