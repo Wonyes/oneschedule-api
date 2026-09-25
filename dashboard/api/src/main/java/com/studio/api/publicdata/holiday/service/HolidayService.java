@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.ArrayList;
 
 @Slf4j
 @Service
@@ -84,6 +85,8 @@ public class HolidayService {
                     .map(h -> h.getLocdate() + "|" + h.getDateName())
                     .collect(Collectors.toSet());
 
+            List<HolidayEntity> toSave = new ArrayList<>();
+
             for (Map<String, Object> map : holidayMaps) {
                 String locdate = getMapValue(map, "locdate");
                 String dateName = getMapValue(map, "dateName", "datename");
@@ -100,9 +103,12 @@ public class HolidayService {
                             .isHoliday(isHoliday)
                             .build();
 
-                    holidayRepository.save(holidayEntity);
+                    toSave.add(holidayEntity);
                 }
             }
+
+            // 루프 안에서 건건이 저장하지 않고 한 번에 넘긴다
+            if (!toSave.isEmpty()) holidayRepository.saveAll(toSave);
 
 
         } catch (Exception e) {

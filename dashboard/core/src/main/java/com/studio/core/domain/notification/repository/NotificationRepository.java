@@ -47,4 +47,14 @@ public interface NotificationRepository extends JpaRepository<NotificationEntity
     @Query("update NotificationEntity n set n.sender = null where n.sender.memberNo = :memberNo")
     void detachSender(@Param("memberNo") Long memberNo);
 
+    /** 정리용 — 읽은 지 오래된 알림 */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("delete from NotificationEntity n where n.readAt is not null and n.readAt < :before")
+    int deleteReadBefore(@Param("before") LocalDateTime before);
+
+    /** 정리용 — 안 읽었어도 너무 오래된 알림 */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("delete from NotificationEntity n where n.createAt < :before")
+    int deleteCreatedBefore(@Param("before") LocalDateTime before);
+
 }

@@ -4,7 +4,9 @@ import com.studio.core.domain.member.entity.MemberEntity;
 import com.studio.core.global.enums.GroupRole;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.DynamicUpdate;
 
+@DynamicUpdate   // 바뀐 컬럼만 UPDATE
 @Entity
 @Table(
         name = "tb_group_member",

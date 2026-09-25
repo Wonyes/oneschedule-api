@@ -16,7 +16,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Objects;
+import org.hibernate.annotations.DynamicUpdate;
 
+@DynamicUpdate   // 바뀐 컬럼만 UPDATE
 @Entity
 @Table(name = "tb_schedule")
 @Getter

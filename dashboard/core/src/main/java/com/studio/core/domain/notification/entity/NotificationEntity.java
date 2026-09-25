@@ -11,7 +11,9 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import org.hibernate.annotations.DynamicUpdate;
 
+@DynamicUpdate   // 바뀐 컬럼만 UPDATE
 @Entity
 @Table(name = "tb_notification")
 @Getter
