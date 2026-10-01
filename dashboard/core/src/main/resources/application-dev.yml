@@ -1,0 +1,112 @@
+server:
+  forward-headers-strategy: framework
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ENC(T/SmVRhU375r0cKQHsqukdMHkdTlder8S/dA5bIDf3+BwrUwmtPleQ==)
+    password: ENC(TqA11zQ5nMOyoHQ0w479GvKgIm73siIr3OGuCAc3MEI=)
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
+  datasource:
+    url: jdbc:oracle:thin:@onescheduler_high?TNS_ADMIN=/home/ubuntu/wallet
+    username: ENC(XOXjE5sTQkmKsbEH/C3AsQ==)
+    password: ENC(5ScdJkRuf5X2P1eeKdYbtG8hCmh1ljp8)
+    driver-class-name: oracle.jdbc.OracleDriver
+    hikari:
+      maximum-pool-size: 30 # 풀에 동시에 유지할 수 있는 최대 커넥션 수
+      minimum-idle: 5 # 최소한 유지할 idle 커넥션 수
+      idle-timeout: 30000 # 커넥션이 idle이면 30초 후 제거
+      connection-timeout: 30000 # 커넥션을 얻을 때 30초 기다리고 실패
+      leak-detection-threshold: 2000 # 2초 넘게 반납 안 하면 경고 출력
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+    show-sql: true
+
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.OracleDialect
+        default_batch_fetch_size: 100
+    open-in-view: false
+
+  data:
+    web:
+      pageable:
+        max-page-size: 100
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ENC(/KjrJt9vLfAcvsjNXLHVVo1OS0xb1i72ZGEuGp6ej6mPuwHFuIPfGUTlaguItntrewyv8/MVKRscsADAcozv7y8aZidRG6pLIZyMLJD1U9L86vX2APodPw==)
+            client-secret: ENC(VKT7eba26SZXc4t5RXNe7ehUl93+iIbXrMSET8EoKVvjCYEQOzW1NXMtMEegj9yT)
+            scope: profile, email
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+
+
+app:
+  front-url: https://oneschedule.site
+
+weather :
+  service-key : ENC(swlaqRclth3YQE8tORda1tXI2+B9LYRhUrFwFwqmf3ZfZSUZnRzIrhWBUa/Fv0i7Ln8ZfXlugQdiEdWNgD7xBYXd4VVs8A7E52J4PKfIEbk=)
+
+naver:
+  client-id: ENC(8YPt+H6DxVR5085oi6caY4jwbb5gDzhAM4LqWSQW69A=)
+  client-secret: ENC(lSpBbf70FFhxUFNdjWY4pvALSmmsfujyej0tYb+/VfSG4HbHVMW/mg==)
+
+# swagger 설정
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui
+    disable-swagger-default-url: true
+    display-request-duration: true
+    tags-sorter: alpha
+    operations-sorter: method
+    doc-expansion: none
+    persist-authorization: true
+
+jasypt:
+  encryptor:
+    bean: jasyptStringEncryptor
+    password: ${JASYPT_PASSWORD}
+
+jwt:
+  expiration_time: 1800000 # 30분
+  secret: ENC(f2iKVwWmz2z+Qc9Sc99oZZGUip3KhbU4QIZ/ymLbE+gURTj0xqQPKLH0ag0u6jAEEsDQrXNvHiQ=)
+  refresh:
+    expiration_time: 604800000 # 7일
+
+cookie:
+  secure: true
+  same-site: Lax
+  domain: oneschedule.site
+
+cors:
+  allowed-headers: "*"
+  allowed-methods: "*"
+  max-age: 3600
+  allowed-origins: https://oneschedule.site
+  allow-credentials: true
+
+

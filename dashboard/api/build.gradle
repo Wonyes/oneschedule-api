@@ -1,0 +1,11 @@
+
+bootJar {
+	archiveFileName = "api.jar"
+	enabled = true
+}
+jar {
+	enabled = false
+}
+
+
+tasks.register("prepareKotlinBuildScriptModel"){}

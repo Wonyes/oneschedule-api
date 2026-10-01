@@ -1,0 +1,27 @@
+# ── 절대 올리면 안 되는 것 ──
+# Oracle ATP 접속 지갑 — 이 폴더 하나로 DB에 직접 붙을 수 있다
+wallet/
+**/wallet/
+*.p12
+*.pem
+*.jks
+*.sso
+
+# IDE 설정 (DB 접속 정보가 들어간다)
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+
+# ── 빌드 산출물 ──
+build/
+out/
+.gradle/
+bin/
+!gradle/wrapper/gradle-wrapper.jar
+
+# ── 기타 ──
+.DS_Store
+*.log
+HELP.md

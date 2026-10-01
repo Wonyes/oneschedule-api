@@ -1,0 +1,24 @@
+name: Deploy API
+
+# 이 저장소는 코드 공개용 미러다. 실제 배포는 운영 저장소에서 돌고,
+# 여기엔 EC2 시크릿이 없으므로 수동 실행으로만 둔다 (푸시마다 실패로 찍히지 않게).
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/ubuntu/apps/dashboard-apis/dashboard
+            git pull origin main
+            ./gradlew :api:bootJar
+            sudo systemctl restart dashboard-api
+            sudo systemctl status dashboard-api --no-pager
